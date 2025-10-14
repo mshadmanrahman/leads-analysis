@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Delivery Dashboard</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Showdown for Markdown rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+    <!-- Custom Google Font: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles to complement Tailwind */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+        }
+        .chart-container {
+            position: relative;
+            height: 40vh;
+            width: 100%;
+        }
+        /* Custom scrollbar for the table container */
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f5f9; /* slate-100 */
+        }
+        .table-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1; /* slate-300 */
+            border-radius: 4px;
+        }
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; /* slate-400 */
+        }
+        /* Styling for generated insights */
+        #insights-content .prose h3 {
+            margin-bottom: 0.5em;
+        }
+         #insights-content .prose ul {
+            padding-left: 1.5em;
+            margin-top: 0.5em;
+        }
+         #insights-content .prose p {
+            margin-bottom: 0.75em;
+        }
+        /* Spinner animation */
+        .loader {
+            border: 4px solid #f3f3f3; /* Light grey */
+            border-top: 4px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="antialiased text-slate-700">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <!-- Dashboard Header -->
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-slate-800">Customer Delivery Performance</h1>
+            <p class="text-slate-500 mt-1">An overview of key metrics from Series 1 and Series 2.</p>
+        </header>
+
+        <!-- File Upload Section -->
+        <section id="file-upload-section" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-semibold text-slate-800 mb-4 text-center">Generate Your Dashboard</h2>
+                <p class="text-center text-slate-500 mb-6">Please upload the 'Data' and 'Overview' CSV files to begin.</p>
+                <div class="space-y-4">
+                    <div>
+                        <label for="data-file-input" class="block text-sm font-medium text-slate-700 mb-1">1. Data File (.csv)</label>
+                        <input id="data-file-input" type="file" accept=".csv" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        <span id="data-file-name" class="text-xs text-slate-500 mt-1 block"></span>
+                    </div>
+                    <div>
+                        <label for="overview-file-input" class="block text-sm font-medium text-slate-700 mb-1">2. Overview File (.csv)</label>
+                        <input id="overview-file-input" type="file" accept=".csv" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        <span id="overview-file-name" class="text-xs text-slate-500 mt-1 block"></span>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <button id="generate-dashboard-btn" class="w-full bg-blue-600 text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center disabled:bg-slate-400 disabled:cursor-not-allowed" disabled>
+                        Generate Dashboard
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Dashboard Grid (Initially Hidden) -->
+        <main id="dashboard-content" class="space-y-8 hidden">
+
+            <!-- AI Insights Section -->
+            <section id="ai-insights-section">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-4">
+                        <h2 class="text-xl font-semibold text-slate-800">Performance Analysis</h2>
+                        <button id="generate-insights-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto disabled:bg-slate-400 disabled:cursor-not-allowed">
+                            <span>✨ Generate Summary</span>
+                        </button>
+                    </div>
+                    <div id="insights-content" class="text-slate-600 space-y-2 prose prose-slate max-w-none">
+                        <p class="text-slate-500">Click the button to get an AI-powered summary of the key performance changes between Series 1 and Series 2.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- KPI Cards Section -->
+            <section>
+                <h2 class="text-xl font-semibold text-slate-800 mb-4">Key Performance Indicators</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div id="kpi-avg-leads" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200"></div>
+                    <div id="kpi-avg-views" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200"></div>
+                    <div id="kpi-avg-cpl" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200"></div>
+                    <div id="kpi-avg-cpv" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200"></div>
+                </div>
+            </section>
+
+            <!-- Charts Section -->
+            <section class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                <div class="lg:col-span-3 space-y-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Series 1 vs. Series 2: Average Performance</h3>
+                        <div class="chart-container" style="height: 350px;"><canvas id="seriesComparisonChart"></canvas></div>
+                    </div>
+                     <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-semibold text-slate-800 mb-1">Leads by Country</h3>
+                        <p class="text-sm text-slate-500 mb-4">Showing data for <span class="font-semibold" id="country-chart-series-label">Series 1</span>.</p>
+                        <div class="chart-container" style="height: 350px;"><canvas id="leadsByCountryChart"></canvas></div>
+                    </div>
+                </div>
+                <div class="lg:col-span-2 space-y-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Cost Per Lead (CPL) Change</h3>
+                        <p class="text-sm text-slate-500 mb-4">How CPL changed from Series 1 to Series 2.</p>
+                        <div class="chart-container" style="height:250px"><canvas id="cplChangeChart"></canvas></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Cost Per View (CPV) Change</h3>
+                         <p class="text-sm text-slate-500 mb-4">How CPV changed from Series 1 to Series 2.</p>
+                        <div class="chart-container" style="height:250px"><canvas id="cpvChangeChart"></canvas></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Data Table Section -->
+            <section>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold text-slate-800">Detailed Data</h3>
+                        <input type="text" id="searchInput" placeholder="Search table..." class="mt-2 sm:mt-0 w-full sm:w-auto px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="overflow-x-auto table-container">
+                        <table class="w-full text-sm text-left text-slate-500">
+                            <thead class="text-xs text-slate-700 uppercase bg-slate-100">
+                                <tr id="table-header"></tr>
+                            </thead>
+                            <tbody id="table-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal for messages -->
+    <div id="message-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 id="modal-title" class="text-lg font-bold text-slate-800"></h3>
+            <p id="modal-message" class="mt-2 text-sm text-slate-600"></p>
+            <div class="mt-6 flex justify-end">
+                <button id="modal-close-btn" class="bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300 transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- GLOBAL STATE ---
+            let allData = [];
+            let overviewStats = {};
+            const markdownConverter = new showdown.Converter();
+
+            // --- DOM ELEMENTS ---
+            const dataFileInput = document.getElementById('data-file-input');
+            const overviewFileInput = document.getElementById('overview-file-input');
+            const generateDashboardBtn = document.getElementById('generate-dashboard-btn');
+            const dashboardContent = document.getElementById('dashboard-content');
+            const fileUploadSection = document.getElementById('file-upload-section');
+            const dataFileNameSpan = document.getElementById('data-file-name');
+            const overviewFileNameSpan = document.getElementById('overview-file-name');
+            const searchInput = document.getElementById('searchInput');
+            const generateInsightsBtn = document.getElementById('generate-insights-btn');
+            
+            // --- FILE UPLOAD LOGIC ---
+            
+            /**
+             * Checks if both files are selected and enables/disables the generate button.
+             */
+            function checkFilesAndToggleButton() {
+                if (dataFileInput.files.length > 0 && overviewFileInput.files.length > 0) {
+                    generateDashboardBtn.disabled = false;
+                } else {
+                    generateDashboardBtn.disabled = true;
+                }
+            }
+            
+            dataFileInput.addEventListener('change', () => {
+                dataFileNameSpan.textContent = dataFileInput.files.length > 0 ? dataFileInput.files[0].name : '';
+                checkFilesAndToggleButton();
+            });
+
+            overviewFileInput.addEventListener('change', () => {
+                overviewFileNameSpan.textContent = overviewFileInput.files.length > 0 ? overviewFileInput.files[0].name : '';
+                checkFilesAndToggleButton();
+            });
+            
+            /**
+             * Reads a file as text using a Promise.
+             * @param {File} file - The file to read.
+             * @returns {Promise<string>} The content of the file.
+             */
+            function readFileAsText(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = () => reject(reader.error);
+                    reader.readAsText(file);
+                });
+            }
+
+            generateDashboardBtn.addEventListener('click', async () => {
+                const dataFile = dataFileInput.files[0];
+                const overviewFile = overviewFileInput.files[0];
+
+                if (!dataFile || !overviewFile) {
+                    showMessageModal('File Missing', 'Please select both the data and overview CSV files.');
+                    return;
+                }
+
+                try {
+                    const [dataCsv, overviewCsv] = await Promise.all([
+                        readFileAsText(dataFile),
+                        readFileAsText(overviewFile)
+                    ]);
+                    
+                    initializeDashboard(dataCsv, overviewCsv);
+
+                } catch (error) {
+                    console.error("Error reading files:", error);
+                    showMessageModal('Error', 'There was an issue reading your files. Please ensure they are valid CSV files and try again.');
+                }
+            });
+
+
+            // --- DASHBOARD INITIALIZATION & RENDERING ---
+
+            function initializeDashboard(dataCsv, overviewCsv) {
+                try {
+                    // 1. Parse Data
+                    allData = parseCsvData(dataCsv);
+                    overviewStats = parseOverviewData(overviewCsv);
+
+                    if (allData.length === 0 || Object.keys(overviewStats.series1).length === 0) {
+                         throw new Error("CSV parsing resulted in empty data. Please check file format and content.");
+                    }
+
+                    // 2. Render all components
+                    renderKpis();
+                    renderAllCharts();
+                    renderTable(allData);
+
+                    // 3. Show dashboard and hide upload form
+                    fileUploadSection.classList.add('hidden');
+                    dashboardContent.classList.remove('hidden');
+
+                } catch (error) {
+                     console.error("Dashboard initialization failed:", error);
+                     showMessageModal('Dashboard Error', `Could not generate the dashboard. ${error.message}`);
+                }
+            }
+
+
+            // --- DATA PARSING & PROCESSING ---
+            function parseCsvData(csv) {
+                const lines = csv.trim().split('\n');
+                if (lines.length < 2) return [];
+                const headers = lines[0].split(',').map(h => h.trim());
+                return lines.slice(1).map(line => {
+                    const values = line.split(',');
+                    const obj = {};
+                    headers.forEach((header, i) => {
+                        const value = values[i] ? values[i].trim() : '';
+                        obj[header] = !isNaN(parseFloat(value)) && isFinite(value) && value !== '' ? parseFloat(value) : value;
+                    });
+                    return obj;
+                });
+            }
+
+            function parseOverviewData(csv) {
+                const lines = csv.trim().split('\n');
+                const stats = { series1: {}, series2: {}, comparison: {} };
+                let currentSection = null;
+
+                lines.forEach(line => {
+                    const parts = line.split(',');
+                    const metricName = parts[0].trim();
+
+                    if (metricName.startsWith('Series 1 Statistics')) currentSection = stats.series1;
+                    else if (metricName.startsWith('Series 2 Statistics')) currentSection = stats.series2;
+                    else if (metricName.startsWith('Series 1 Vs Series 2')) currentSection = stats.comparison;
+                    else if (currentSection && metricName && metricName !== 'Metric' && parts[1]) {
+                        const key = metricName.toLowerCase().replace(/ /g, '');
+                        if (currentSection === stats.comparison) {
+                            stats.comparison[key] = { increased: parseFloat(parts[1]), decreased: parseFloat(parts[2]), noChange: parseFloat(parts[3]) };
+                        } else {
+                             stats[currentSection === stats.series1 ? 'series1' : 'series2'][key] = { average: parseFloat(parts[1]), median: parseFloat(parts[2]) };
+                        }
+                    }
+                });
+                return stats;
+            }
+
+            // --- RENDER FUNCTIONS ---
+            function renderKpis() {
+                const { series1, series2 } = overviewStats;
+                
+                const createKpiCard = (title, s1Value, s2Value, isCurrency = false) => {
+                    const diff = s2Value - s1Value;
+                    const diffPercent = s1Value !== 0 ? (diff / s1Value) * 100 : 0;
+                    const isIncreaseBad = title.toLowerCase().includes('cost');
+                    let diffColor, diffIcon;
+                    
+                    if (diff === 0) {
+                        diffColor = 'text-slate-500';
+                        diffIcon = '—';
+                    } else if ((isIncreaseBad && diff > 0) || (!isIncreaseBad && diff < 0)) {
+                        diffColor = 'text-red-500';
+                        diffIcon = diff > 0 ? '▲' : '▼';
+                    } else {
+                        diffColor = 'text-green-500';
+                        diffIcon = diff > 0 ? '▲' : '▼';
+                    }
+                    
+                    const formatValue = (val) => isCurrency ? `NOK ${val.toFixed(2)}` : val.toFixed(1);
+
+                    return `
+                        <h3 class="text-sm font-medium text-slate-500 uppercase tracking-wider">${title}</h3>
+                        <div class="mt-2 flex items-baseline space-x-2">
+                            <p class="text-2xl font-semibold text-slate-800">${formatValue(s2Value)}</p>
+                            <p class="text-xs text-slate-400">vs ${formatValue(s1Value)} (S1)</p>
+                        </div>
+                        <p class="mt-1 text-xs ${diffColor} flex items-center">
+                            <span class="mr-1">${diffIcon}</span>
+                            <span>${Math.abs(diffPercent).toFixed(1)}%</span>
+                        </p>`;
+                };
+                
+                document.getElementById('kpi-avg-leads').innerHTML = createKpiCard('Avg Total Leads', series1.totalleads.average, series2.totalleads.average);
+                document.getElementById('kpi-avg-views').innerHTML = createKpiCard('Avg Program Views', series1.programviews.average, series2.programviews.average);
+                document.getElementById('kpi-avg-cpl').innerHTML = createKpiCard('Avg Cost Per Lead', series1.costperlead.average, series2.costperlead.average, true);
+                document.getElementById('kpi-avg-cpv').innerHTML = createKpiCard('Avg Cost Per Program View', series1.costperprogramview.average, series2.costperprogramview.average, true);
+            }
+
+            function renderAllCharts() {
+                // Clear previous charts if any, to prevent conflicts
+                ['seriesComparisonChart', 'leadsByCountryChart', 'cplChangeChart', 'cpvChangeChart'].forEach(id => {
+                     const chart = Chart.getChart(id);
+                     if(chart) chart.destroy();
+                });
+
+                renderSeriesComparisonChart();
+                renderLeadsByCountryChart();
+                renderChangeChart('cplChangeChart', overviewStats.comparison.costperlead, 'Cost Per Lead Change');
+                renderChangeChart('cpvChangeChart', overviewStats.comparison.costperprogramview, 'Cost Per Program View Change');
+            }
+
+            function renderSeriesComparisonChart() {
+                const ctx = document.getElementById('seriesComparisonChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Avg Leads', 'Avg Views', 'Avg CPL (NOK)', 'Avg CPV (NOK)'],
+                        datasets: [
+                            {
+                                label: 'Series 1',
+                                data: [
+                                    overviewStats.series1.totalleads.average,
+                                    overviewStats.series1.programviews.average,
+                                    overviewStats.series1.costperlead.average,
+                                    overviewStats.series1.costperprogramview.average
+                                ],
+                                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                                borderWidth: 1, borderRadius: 4,
+                            },
+                            {
+                                label: 'Series 2',
+                                data: [
+                                    overviewStats.series2.totalleads.average,
+                                    overviewStats.series2.programviews.average,
+                                    overviewStats.series2.costperlead.average,
+                                    overviewStats.series2.costperprogramview.average
+                                ],
+                                backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                                borderWidth: 1, borderRadius: 4,
+                            }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                });
+            }
+            
+            function renderChangeChart(elementId, data, title) {
+                const ctx = document.getElementById(elementId).getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Increased', 'Decreased', 'No Change'],
+                        datasets: [{
+                            label: title,
+                            data: [data.increased, data.decreased, data.noChange],
+                            backgroundColor: ['rgba(239, 68, 68, 0.7)', 'rgba(34, 197, 94, 0.7)', 'rgba(203, 213, 225, 0.7)'],
+                            borderColor: '#fff', borderWidth: 2,
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                });
+            }
+            
+            function renderLeadsByCountryChart() {
+                const series1Data = allData.filter(row => row['Time Series Id'] === 1);
+                const leadsByCountry = series1Data.reduce((acc, row) => {
+                    const country = row['Customer Country'];
+                    const leads = row['Total Leads'];
+                    if (country && typeof leads === 'number') {
+                        acc[country] = (acc[country] || 0) + leads;
+                    }
+                    return acc;
+                }, {});
+                
+                const sortedCountries = Object.entries(leadsByCountry).sort(([, a], [, b]) => b - a);
+                const ctx = document.getElementById('leadsByCountryChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedCountries.map(item => item[0]),
+                        datasets: [{
+                            label: 'Total Leads',
+                            data: sortedCountries.map(item => item[1]),
+                            backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                            borderWidth: 1, borderRadius: 4,
+                        }]
+                    },
+                    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+                });
+            }
+
+            function renderTable(data) {
+                const tableHeader = document.getElementById('table-header');
+                const tableBody = document.getElementById('table-body');
+                
+                tableHeader.innerHTML = '';
+                tableBody.innerHTML = '';
+
+                if (data.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="100%" class="text-center p-8 text-slate-500">No data available.</td></tr>`;
+                    return;
+                };
+
+                const headers = Object.keys(data[0]);
+                headers.forEach(header => {
+                    const th = document.createElement('th');
+                    th.scope = 'col';
+                    th.className = 'px-6 py-3';
+                    th.textContent = header;
+                    tableHeader.appendChild(th);
+                });
+
+                data.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'bg-white border-b hover:bg-slate-50';
+                    headers.forEach(header => {
+                        const td = document.createElement('td');
+                        td.className = 'px-6 py-4';
+                        td.textContent = row[header];
+                        tr.appendChild(td);
+                    });
+                    tableBody.appendChild(tr);
+                });
+            }
+
+            // --- GEMINI API INTEGRATION ---
+            async function callGemini(systemPrompt, userQuery) {
+                // Call our secure serverless function instead of directly calling Gemini API
+                const response = await fetch('/api/generate-insights', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ systemPrompt, userQuery })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                return result.text;
+            }
+            
+            async function generateAndDisplayInsights() {
+                const insightsContent = document.getElementById('insights-content');
+                
+                generateInsightsBtn.disabled = true;
+                insightsContent.innerHTML = `<div class="flex flex-col items-center justify-center p-4"><div class="loader"></div><p class="mt-4 text-sm text-slate-500">Analyzing performance data...</p></div>`;
+
+                const systemPrompt = "You are a senior data analyst. Your task is to provide a concise, insightful summary of customer delivery performance based on the provided data. Compare Series 2 to Series 1. The currency is Norwegian Krone (NOK). Structure your response in markdown with a main heading, a brief paragraph, and key takeaways as a bulleted list. Be professional and data-driven in your analysis.";
+                
+                const userQuery = `
+                    Here is the performance data summary:
+                    Series 1 Key Metrics (Average):
+                    - Total Leads: ${overviewStats.series1.totalleads.average.toFixed(1)}, Program Views: ${overviewStats.series1.programviews.average.toFixed(1)}, CPL: ${overviewStats.series1.costperlead.average.toFixed(2)} NOK, CPV: ${overviewStats.series1.costperprogramview.average.toFixed(2)} NOK
+                    Series 2 Key Metrics (Average):
+                    - Total Leads: ${overviewStats.series2.totalleads.average.toFixed(1)}, Program Views: ${overviewStats.series2.programviews.average.toFixed(1)}, CPL: ${overviewStats.series2.costperlead.average.toFixed(2)} NOK, CPV: ${overviewStats.series2.costperprogramview.average.toFixed(2)} NOK
+                    Change Analysis (Count of Customers):
+                    - CPL Increased for: ${overviewStats.comparison.costperlead.increased}, CPL Decreased for: ${overviewStats.comparison.costperlead.decreased}
+                    - CPV Increased for: ${overviewStats.comparison.costperprogramview.increased}, CPV Decreased for: ${overviewStats.comparison.costperprogramview.decreased}
+                    Please provide your analysis.`;
+
+                try {
+                    const analysisText = await callGemini(systemPrompt, userQuery);
+                    insightsContent.innerHTML = markdownConverter.makeHtml(analysisText);
+                } catch (error) {
+                    console.error(error);
+                    insightsContent.innerHTML = `<p class="text-red-500">An error occurred while generating the analysis. Please try again later.</p>`;
+                     showMessageModal('Error', 'Could not generate the performance summary. Please check the console for more details and try again.');
+                } finally {
+                    generateInsightsBtn.disabled = false;
+                }
+            }
+
+            // --- EVENT LISTENERS ---
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const filteredData = allData.filter(row => 
+                    Object.values(row).some(value => 
+                        String(value).toLowerCase().includes(searchTerm)
+                    )
+                );
+                renderTable(filteredData);
+            });
+
+            generateInsightsBtn.addEventListener('click', generateAndDisplayInsights);
+            
+            // Modal handling
+            const modal = document.getElementById('message-modal');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+            function showMessageModal(title, message) {
+                modal.querySelector('#modal-title').textContent = title;
+                modal.querySelector('#modal-message').textContent = message;
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+            function hideMessageModal() {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+            modalCloseBtn.addEventListener('click', hideMessageModal);
+            modal.addEventListener('click', (e) => { if (e.target === modal) hideMessageModal(); });
+        });
+    </script>
+</body>
+</html>
+
