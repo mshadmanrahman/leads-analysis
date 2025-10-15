@@ -170,6 +170,31 @@
                 </div>
             </section>
 
+            <!-- Lead Types Analysis Section -->
+            <section>
+                <h2 class="text-xl font-semibold text-slate-800 mb-4">Lead Types Analysis</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Form Leads vs Loop Leads by Period</h3>
+                        <div class="chart-container" style="height: 350px;"><canvas id="leadTypesChart"></canvas></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Loop Leads by School</h3>
+                        <p class="text-sm text-slate-500 mb-4">Comparison between Period 1 and Period 2</p>
+                        <div class="chart-container" style="height: 350px;"><canvas id="loopLeadsBySchoolChart"></canvas></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Loop Leads by Country Section -->
+            <section>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4">Loop Leads by Country</h3>
+                    <p class="text-sm text-slate-500 mb-4">Comparison between Period 1 and Period 2</p>
+                    <div class="chart-container" style="height: 450px;"><canvas id="loopLeadsByCountryChart"></canvas></div>
+                </div>
+            </section>
+
             <!-- Data Table Section -->
             <section>
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
@@ -473,7 +498,8 @@
 
             function renderAllCharts() {
                 // Clear previous charts if any, to prevent conflicts
-                ['seriesComparisonChart', 'leadsByCountryChart', 'cplChangeChart', 'cpvChangeChart'].forEach(id => {
+                ['seriesComparisonChart', 'leadsByCountryChart', 'cplChangeChart', 'cpvChangeChart', 
+                 'leadTypesChart', 'loopLeadsBySchoolChart', 'loopLeadsByCountryChart'].forEach(id => {
                      const chart = Chart.getChart(id);
                      if(chart) chart.destroy();
                 });
@@ -482,6 +508,11 @@
                 renderLeadsByCountryChart();
                 renderChangeChart('cplChangeChart', overviewStats.comparison.costperlead, 'Cost Per Lead Change');
                 renderChangeChart('cpvChangeChart', overviewStats.comparison.costperprogramview, 'Cost Per Program View Change');
+                
+                // New lead type charts
+                renderLeadTypesChart();
+                renderLoopLeadsBySchoolChart();
+                renderLoopLeadsByCountryChart();
             }
 
             function renderSeriesComparisonChart() {
@@ -561,6 +592,176 @@
                         }]
                     },
                     options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+                });
+            }
+
+            function renderLeadTypesChart() {
+                // Sum form leads and loop leads for each period
+                const series1Data = allData.filter(row => row['Time Series Id'] === 1);
+                const series2Data = allData.filter(row => row['Time Series Id'] === 2);
+                
+                const sumFormLeads1 = series1Data.reduce((sum, row) => sum + (row['Form Leads'] || 0), 0);
+                const sumLoopLeads1 = series1Data.reduce((sum, row) => sum + (row['Loop Leads'] || 0), 0);
+                const sumFormLeads2 = series2Data.reduce((sum, row) => sum + (row['Form Leads'] || 0), 0);
+                const sumLoopLeads2 = series2Data.reduce((sum, row) => sum + (row['Loop Leads'] || 0), 0);
+                
+                const ctx = document.getElementById('leadTypesChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Period 1', 'Period 2'],
+                        datasets: [
+                            {
+                                label: 'Form Leads',
+                                data: [sumFormLeads1, sumFormLeads2],
+                                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                            },
+                            {
+                                label: 'Loop Leads',
+                                data: [sumLoopLeads1, sumLoopLeads2],
+                                backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                            }
+                        ]
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        scales: { y: { beginAtZero: true } },
+                        plugins: {
+                            legend: { position: 'top' }
+                        }
+                    }
+                });
+            }
+
+            function renderLoopLeadsBySchoolChart() {
+                // Group loop leads by school for each period
+                const series1Data = allData.filter(row => row['Time Series Id'] === 1);
+                const series2Data = allData.filter(row => row['Time Series Id'] === 2);
+                
+                const loopLeadsBySchool1 = {};
+                const loopLeadsBySchool2 = {};
+                
+                series1Data.forEach(row => {
+                    const school = row['Customer School'];
+                    const loopLeads = row['Loop Leads'] || 0;
+                    if (school) {
+                        loopLeadsBySchool1[school] = (loopLeadsBySchool1[school] || 0) + loopLeads;
+                    }
+                });
+                
+                series2Data.forEach(row => {
+                    const school = row['Customer School'];
+                    const loopLeads = row['Loop Leads'] || 0;
+                    if (school) {
+                        loopLeadsBySchool2[school] = (loopLeadsBySchool2[school] || 0) + loopLeads;
+                    }
+                });
+                
+                // Get all unique schools
+                const allSchools = new Set([...Object.keys(loopLeadsBySchool1), ...Object.keys(loopLeadsBySchool2)]);
+                const schoolLabels = Array.from(allSchools).sort();
+                
+                const ctx = document.getElementById('loopLeadsBySchoolChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: schoolLabels,
+                        datasets: [
+                            {
+                                label: 'Period 1',
+                                data: schoolLabels.map(school => loopLeadsBySchool1[school] || 0),
+                                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                            },
+                            {
+                                label: 'Period 2',
+                                data: schoolLabels.map(school => loopLeadsBySchool2[school] || 0),
+                                backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                            }
+                        ]
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true } },
+                        plugins: {
+                            legend: { position: 'top' }
+                        }
+                    }
+                });
+            }
+
+            function renderLoopLeadsByCountryChart() {
+                // Group loop leads by country for each period
+                const series1Data = allData.filter(row => row['Time Series Id'] === 1);
+                const series2Data = allData.filter(row => row['Time Series Id'] === 2);
+                
+                const loopLeadsByCountry1 = {};
+                const loopLeadsByCountry2 = {};
+                
+                series1Data.forEach(row => {
+                    const country = row['Customer Country'];
+                    const loopLeads = row['Loop Leads'] || 0;
+                    if (country) {
+                        loopLeadsByCountry1[country] = (loopLeadsByCountry1[country] || 0) + loopLeads;
+                    }
+                });
+                
+                series2Data.forEach(row => {
+                    const country = row['Customer Country'];
+                    const loopLeads = row['Loop Leads'] || 0;
+                    if (country) {
+                        loopLeadsByCountry2[country] = (loopLeadsByCountry2[country] || 0) + loopLeads;
+                    }
+                });
+                
+                // Get all unique countries and sort by total loop leads
+                const allCountries = new Set([...Object.keys(loopLeadsByCountry1), ...Object.keys(loopLeadsByCountry2)]);
+                const countryLabels = Array.from(allCountries).sort((a, b) => {
+                    const totalA = (loopLeadsByCountry1[a] || 0) + (loopLeadsByCountry2[a] || 0);
+                    const totalB = (loopLeadsByCountry1[b] || 0) + (loopLeadsByCountry2[b] || 0);
+                    return totalB - totalA;
+                });
+                
+                const ctx = document.getElementById('loopLeadsByCountryChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: countryLabels,
+                        datasets: [
+                            {
+                                label: 'Period 1',
+                                data: countryLabels.map(country => loopLeadsByCountry1[country] || 0),
+                                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                            },
+                            {
+                                label: 'Period 2',
+                                data: countryLabels.map(country => loopLeadsByCountry2[country] || 0),
+                                backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                            }
+                        ]
+                    },
+                    options: { 
+                        indexAxis: 'y',
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        scales: { x: { beginAtZero: true } },
+                        plugins: {
+                            legend: { position: 'top' }
+                        }
+                    }
                 });
             }
 
