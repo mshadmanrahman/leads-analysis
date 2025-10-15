@@ -83,27 +83,12 @@
         <section id="file-upload-section" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8">
             <div class="max-w-2xl mx-auto">
                 <h2 class="text-xl font-semibold text-slate-800 mb-4 text-center">Generate Your Dashboard</h2>
-                <p class="text-center text-slate-500 mb-6">Upload a single Excel file (.xlsx) containing 'Data' and 'Overview' sheets, or upload two separate CSV files.</p>
+                <p class="text-center text-slate-500 mb-6">Upload an Excel file (.xlsx) containing 'Data' and 'Overview' sheets.</p>
                 <div class="space-y-4">
                     <div>
-                        <label for="excel-file-input" class="block text-sm font-medium text-slate-700 mb-1">Option 1: Excel File (.xlsx)</label>
+                        <label for="excel-file-input" class="block text-sm font-medium text-slate-700 mb-1">Excel File (.xlsx)</label>
                         <input id="excel-file-input" type="file" accept=".xlsx,.xls" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
                         <span id="excel-file-name" class="text-xs text-slate-500 mt-1 block"></span>
-                    </div>
-                    <div class="flex items-center">
-                        <div class="flex-1 border-t border-slate-300"></div>
-                        <span class="px-4 text-sm text-slate-400">OR</span>
-                        <div class="flex-1 border-t border-slate-300"></div>
-                    </div>
-                    <div>
-                        <label for="data-file-input" class="block text-sm font-medium text-slate-700 mb-1">Option 2a: Data File (.csv)</label>
-                        <input id="data-file-input" type="file" accept=".csv" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                        <span id="data-file-name" class="text-xs text-slate-500 mt-1 block"></span>
-                    </div>
-                    <div>
-                        <label for="overview-file-input" class="block text-sm font-medium text-slate-700 mb-1">Option 2b: Overview File (.csv)</label>
-                        <input id="overview-file-input" type="file" accept=".csv" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                        <span id="overview-file-name" class="text-xs text-slate-500 mt-1 block"></span>
                     </div>
                 </div>
                 <div class="mt-6">
@@ -228,80 +213,28 @@
 
             // --- DOM ELEMENTS ---
             const excelFileInput = document.getElementById('excel-file-input');
-            const dataFileInput = document.getElementById('data-file-input');
-            const overviewFileInput = document.getElementById('overview-file-input');
             const generateDashboardBtn = document.getElementById('generate-dashboard-btn');
             const dashboardContent = document.getElementById('dashboard-content');
             const fileUploadSection = document.getElementById('file-upload-section');
             const excelFileNameSpan = document.getElementById('excel-file-name');
-            const dataFileNameSpan = document.getElementById('data-file-name');
-            const overviewFileNameSpan = document.getElementById('overview-file-name');
             const searchInput = document.getElementById('searchInput');
             const generateInsightsBtn = document.getElementById('generate-insights-btn');
             
             // --- FILE UPLOAD LOGIC ---
             
             /**
-             * Checks if files are selected and enables/disables the generate button.
-             * Either Excel file OR both CSV files should be present.
+             * Checks if Excel file is selected and enables/disables the generate button.
              */
             function checkFilesAndToggleButton() {
                 const hasExcel = excelFileInput.files.length > 0;
-                const hasBothCsv = dataFileInput.files.length > 0 && overviewFileInput.files.length > 0;
-                
-                if (hasExcel || hasBothCsv) {
-                    generateDashboardBtn.disabled = false;
-                } else {
-                    generateDashboardBtn.disabled = true;
-                }
+                generateDashboardBtn.disabled = !hasExcel;
             }
             
             excelFileInput.addEventListener('change', () => {
                 excelFileNameSpan.textContent = excelFileInput.files.length > 0 ? excelFileInput.files[0].name : '';
-                // Clear CSV inputs when Excel is selected
-                if (excelFileInput.files.length > 0) {
-                    dataFileInput.value = '';
-                    overviewFileInput.value = '';
-                    dataFileNameSpan.textContent = '';
-                    overviewFileNameSpan.textContent = '';
-                }
                 checkFilesAndToggleButton();
             });
             
-            dataFileInput.addEventListener('change', () => {
-                dataFileNameSpan.textContent = dataFileInput.files.length > 0 ? dataFileInput.files[0].name : '';
-                // Clear Excel input when CSV is selected
-                if (dataFileInput.files.length > 0) {
-                    excelFileInput.value = '';
-                    excelFileNameSpan.textContent = '';
-                }
-                checkFilesAndToggleButton();
-            });
-
-            overviewFileInput.addEventListener('change', () => {
-                overviewFileNameSpan.textContent = overviewFileInput.files.length > 0 ? overviewFileInput.files[0].name : '';
-                // Clear Excel input when CSV is selected
-                if (overviewFileInput.files.length > 0) {
-                    excelFileInput.value = '';
-                    excelFileNameSpan.textContent = '';
-                }
-                checkFilesAndToggleButton();
-            });
-            
-            /**
-             * Reads a file as text using a Promise.
-             * @param {File} file - The file to read.
-             * @returns {Promise<string>} The content of the file.
-             */
-            function readFileAsText(file) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result);
-                    reader.onerror = () => reject(reader.error);
-                    reader.readAsText(file);
-                });
-            }
-
             /**
              * Reads an Excel file and extracts sheets as CSV strings.
              * @param {File} file - The Excel file to read.
@@ -334,46 +267,35 @@
 
             generateDashboardBtn.addEventListener('click', async () => {
                 const excelFile = excelFileInput.files[0];
-                const dataFile = dataFileInput.files[0];
-                const overviewFile = overviewFileInput.files[0];
 
                 try {
-                    let dataCsv, overviewCsv;
-
-                    if (excelFile) {
-                        // Read Excel file
-                        const sheets = await readExcelFile(excelFile);
-                        
-                        // Look for Data and Overview sheets (case-insensitive)
-                        const sheetNames = Object.keys(sheets);
-                        const dataSheetName = sheetNames.find(name => name.toLowerCase() === 'data');
-                        const overviewSheetName = sheetNames.find(name => name.toLowerCase() === 'overview');
-                        
-                        if (!dataSheetName || !overviewSheetName) {
-                            showMessageModal('Sheet Missing', 
-                                `Excel file must contain both 'Data' and 'Overview' sheets. Found sheets: ${sheetNames.join(', ')}`);
-                            return;
-                        }
-                        
-                        dataCsv = sheets[dataSheetName];
-                        overviewCsv = sheets[overviewSheetName];
-                        
-                    } else if (dataFile && overviewFile) {
-                        // Read CSV files
-                        [dataCsv, overviewCsv] = await Promise.all([
-                            readFileAsText(dataFile),
-                            readFileAsText(overviewFile)
-                        ]);
-                    } else {
-                        showMessageModal('File Missing', 'Please upload either an Excel file or both CSV files.');
+                    if (!excelFile) {
+                        showMessageModal('File Missing', 'Please upload an Excel file.');
                         return;
                     }
+
+                    // Read Excel file
+                    const sheets = await readExcelFile(excelFile);
+                    
+                    // Look for Data and Overview sheets (case-insensitive)
+                    const sheetNames = Object.keys(sheets);
+                    const dataSheetName = sheetNames.find(name => name.toLowerCase() === 'data');
+                    const overviewSheetName = sheetNames.find(name => name.toLowerCase() === 'overview');
+                    
+                    if (!dataSheetName || !overviewSheetName) {
+                        showMessageModal('Sheet Missing', 
+                            `Excel file must contain both 'Data' and 'Overview' sheets. Found sheets: ${sheetNames.join(', ')}`);
+                        return;
+                    }
+                    
+                    const dataCsv = sheets[dataSheetName];
+                    const overviewCsv = sheets[overviewSheetName];
                     
                     initializeDashboard(dataCsv, overviewCsv);
 
                 } catch (error) {
-                    console.error("Error reading files:", error);
-                    showMessageModal('Error', `There was an issue reading your files: ${error.message}. Please ensure they are valid files and try again.`);
+                    console.error("Error reading file:", error);
+                    showMessageModal('Error', `There was an issue reading your file: ${error.message}. Please ensure it is a valid Excel file and try again.`);
                 }
             });
 
