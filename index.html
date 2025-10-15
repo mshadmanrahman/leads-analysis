@@ -644,7 +644,7 @@
                 const series2Data = allData.filter(row => row['Time Series Id'] === 2);
                 
                 // Try to find the school column (check various possible names)
-                const possibleSchoolColumns = ['Customer School', 'School', 'Customer_School', 'school'];
+                const possibleSchoolColumns = ['KEG Name', 'Customer School', 'School', 'Customer_School', 'school'];
                 let schoolColumn = null;
                 
                 if (allData.length > 0) {
@@ -653,8 +653,10 @@
                     
                     if (!schoolColumn) {
                         console.log('Available columns:', Object.keys(firstRow));
-                        console.log('Could not find school column. Looking for columns containing "school"...');
-                        schoolColumn = Object.keys(firstRow).find(key => key.toLowerCase().includes('school'));
+                        console.log('Could not find school column. Looking for columns containing "school" or "keg"...');
+                        schoolColumn = Object.keys(firstRow).find(key => 
+                            key.toLowerCase().includes('school') || key.toLowerCase().includes('keg')
+                        );
                     }
                 }
                 
