@@ -179,19 +179,10 @@
                         <div class="chart-container" style="height: 350px;"><canvas id="leadTypesChart"></canvas></div>
                     </div>
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Loop Leads by School</h3>
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Loop Leads by Country</h3>
                         <p class="text-sm text-slate-500 mb-4">Comparison between Period 1 and Period 2</p>
-                        <div class="chart-container" style="height: 350px;"><canvas id="loopLeadsBySchoolChart"></canvas></div>
+                        <div class="chart-container" style="height: 350px;"><canvas id="loopLeadsByCountryChart"></canvas></div>
                     </div>
-                </div>
-            </section>
-
-            <!-- Loop Leads by Country Section -->
-            <section>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <h3 class="text-lg font-semibold text-slate-800 mb-4">Loop Leads by Country</h3>
-                    <p class="text-sm text-slate-500 mb-4">Comparison between Period 1 and Period 2</p>
-                    <div class="chart-container" style="height: 450px;"><canvas id="loopLeadsByCountryChart"></canvas></div>
                 </div>
             </section>
 
@@ -499,7 +490,7 @@
             function renderAllCharts() {
                 // Clear previous charts if any, to prevent conflicts
                 ['seriesComparisonChart', 'leadsByCountryChart', 'cplChangeChart', 'cpvChangeChart', 
-                 'leadTypesChart', 'loopLeadsBySchoolChart', 'loopLeadsByCountryChart'].forEach(id => {
+                 'leadTypesChart', 'loopLeadsByCountryChart'].forEach(id => {
                      const chart = Chart.getChart(id);
                      if(chart) chart.destroy();
                 });
@@ -511,7 +502,6 @@
                 
                 // New lead type charts
                 renderLeadTypesChart();
-                renderLoopLeadsBySchoolChart();
                 renderLoopLeadsByCountryChart();
             }
 
@@ -774,9 +764,26 @@
                         indexAxis: 'y',
                         responsive: true, 
                         maintainAspectRatio: false,
-                        scales: { x: { beginAtZero: true } },
+                        scales: { 
+                            x: { 
+                                beginAtZero: true,
+                                ticks: {
+                                    font: { size: 14 }
+                                }
+                            },
+                            y: {
+                                ticks: {
+                                    font: { size: 14 }
+                                }
+                            }
+                        },
                         plugins: {
-                            legend: { position: 'top' }
+                            legend: { 
+                                position: 'top',
+                                labels: {
+                                    font: { size: 14 }
+                                }
+                            }
                         }
                     }
                 });
