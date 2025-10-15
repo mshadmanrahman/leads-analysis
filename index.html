@@ -643,11 +643,26 @@
                 const series1Data = allData.filter(row => row['Time Series Id'] === 1);
                 const series2Data = allData.filter(row => row['Time Series Id'] === 2);
                 
+                // Try to find the school column (check various possible names)
+                const possibleSchoolColumns = ['Customer School', 'School', 'Customer_School', 'school'];
+                let schoolColumn = null;
+                
+                if (allData.length > 0) {
+                    const firstRow = allData[0];
+                    schoolColumn = possibleSchoolColumns.find(col => col in firstRow);
+                    
+                    if (!schoolColumn) {
+                        console.log('Available columns:', Object.keys(firstRow));
+                        console.log('Could not find school column. Looking for columns containing "school"...');
+                        schoolColumn = Object.keys(firstRow).find(key => key.toLowerCase().includes('school'));
+                    }
+                }
+                
                 const loopLeadsBySchool1 = {};
                 const loopLeadsBySchool2 = {};
                 
                 series1Data.forEach(row => {
-                    const school = row['Customer School'];
+                    const school = schoolColumn ? row[schoolColumn] : null;
                     const loopLeads = row['Loop Leads'] || 0;
                     if (school) {
                         loopLeadsBySchool1[school] = (loopLeadsBySchool1[school] || 0) + loopLeads;
@@ -655,7 +670,7 @@
                 });
                 
                 series2Data.forEach(row => {
-                    const school = row['Customer School'];
+                    const school = schoolColumn ? row[schoolColumn] : null;
                     const loopLeads = row['Loop Leads'] || 0;
                     if (school) {
                         loopLeadsBySchool2[school] = (loopLeadsBySchool2[school] || 0) + loopLeads;
